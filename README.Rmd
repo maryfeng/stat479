@@ -1,0 +1,199 @@
+---
+title: "Stanford Open Policing EDA"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+d = read_csv('WI-clean.csv', col_types = list(county_fips = 'c', officer_id = 'c'))
+```
+
+## A first glimpse
+
+The dataset contains 1,059,033 rows and 27 columns.
+```{r}
+d %>% glimpse
+```
+```{r}
+d %>% summary()
+```
+
+## Verifying id is the primary key
+The variable id is the primary key which uniquely identifies each stop.
+```{r}
+d %>% 
+  count(id) %>% 
+  filter(n > 1)
+```
+
+## Verifying each stop in WI
+Each observation was in WI.
+```{r}
+# each stop was in WI
+d %>% 
+  group_by(state) %>%
+  count()
+nrow(d)
+```
+
+## Stop dates
+TODO: explore by year/month/day?
+
+## Stop times
+TODO: explore by hour? 
+
+## Location
+The counties with the highest frequency of stops.
+```{r}
+d %>%
+  group_by(county_name) %>% 
+  count() %>% 
+  arrange(desc(n))
+d %>%
+  group_by(county_fips) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+Note county_name = location_raw + " County". These columns are repetitive, so one of these can be dropped.
+```{r}
+# location_raw is part of county_name before " County"
+d %>%
+  select(county_name) %>% 
+  separate(county_name, into = c("county", "word_county"), sep = -8) %>%
+  select(county) %>% 
+  mutate(county = toupper(county)) %>% 
+  identical(d %>% select(location_raw) %>% transmute(county = location_raw))
+```
+```{r}
+# the last word of county_name is always "County"
+d %>%
+  select(county_name) %>% 
+  separate(county_name, into = c("county", "word_county"), sep = -8) %>% 
+  group_by(word_county) %>% 
+  count()
+```
+
+## Police department
+```{r}
+d %>% 
+  group_by(police_department) %>% 
+  count()
+```
+
+## Driver gender
+```{r}
+d %>% 
+  group_by(driver_gender) %>% 
+  count()
+```
+
+
+## Driver age
+Driver age information is all NA.
+```{r}
+d %>% 
+  group_by(driver_age_raw) %>% 
+  count()
+d %>% 
+  group_by(driver_age) %>% 
+  count()
+```
+
+## Driver race
+```{r}
+# driver_race_raw -> driver_race
+# A -> Asian
+# B -> Black
+# H -> Hispanic
+# I -> Other
+# W -> White
+# O + NA -> NA
+# What is O? 
+d %>%
+  group_by(driver_race_raw) %>% 
+  count()
+d %>%
+  group_by(driver_race) %>% 
+  count()
+```
+
+## Violations
+```{r}
+# most common violations (specific)
+d %>% 
+  group_by(violation_raw) %>% 
+  count() %>% 
+  arrange(desc(n))
+# most common violations (general)
+d %>% 
+  group_by(violation) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+## Search type
+```{r}
+# most common search types
+d %>% 
+  group_by(search_type) %>% 
+  count() %>%
+  arrange(desc(n))
+```
+Note that search_type_raw and search_type are the same.
+```{r}
+identical(d$search_type, d$search_type_raw)
+```
+
+## Stop outcome
+```{r}
+d %>% 
+  group_by(stop_outcome) %>% 
+  count() %>%
+  arrange(desc(n))
+```
+
+## Latitude, longitude
+According to the Wikipedia page for Wisconsin, latitude ranges from 42°30' N to 47°05′ N, while longitude ranges from 86°46′ W to 92°54′ W. There appear to be some errors in values of latitude and longitude, with some values not fitting in the range suggested on Wikipedia either in magnitude and/or direction (some values of longitude are positive and therefore E, not W).
+
+Filtering the latitude by this range reveals that there appears to be some errors as shown below, with some latitude values being too small or large. For instance, the latitude 440721.0000 may have been intended to be 44.0721. (The row with latitude 440721.0000	and longitude 874232.00000 may be intended to be latitude 44.0721 and longitude -87.4232, which maps to a position in Lake Michigan near a line Google Maps labels as Ludington Manitowoc. This seems to be some kind of bridge/ferry?)
+```{r}
+d %>% 
+  filter(lat < 42.3 | lat > 47.05) %>% 
+  arrange(lat) %>% 
+  select(id, lat, lon, everything())
+```
+
+There are some longitude values which are positive, corresponding to E instead of W. These should most likely be negative instead of positive; otherwise this maps to locations on the other side of the world in areas like China.
+```{r}
+d %>% 
+  filter(lon < -92.54 | lon > -86.46) %>% 
+  arrange(lat) %>% 
+  select(id, lat, lon, everything())
+```
+
+There are also locations which map to locations outside WI borders into neighboring states. For instance, there are many stops with the latitude 44.91696 and longitude 92.86195. However, this corresponds to a location in northern China, near the border with Mongolia. This seems to be an error, with the intended longitude of -92.86195. The latitude 44.91696 and longitude -92.86195 maps to a location in eastern Minnesota, which is not too far from the western border to Wisconsin. Further inspection reveals that officer with id 1787 seems to frequent this area, as the officer has made 469 stops within the time span of the dataset.
+```{r}
+d %>% 
+  filter(lat == 44.91696 | lon == 92.86195) %>% 
+  group_by(officer_id) %>% 
+  count()
+```
+
+## Officer
+```{r}
+d %>% 
+  group_by(officer_id) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+## Vehicle type
+This column seems to be in the format (manufacturer, model, year). The following is a simple first look at what combination of these characteristics is most frequent. To explore this in more depth, this could be separated into separate columns for manufacturer, model, and year.
+```{r}
+d %>% 
+  group_by(vehicle_type) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
