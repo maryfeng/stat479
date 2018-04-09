@@ -1,6 +1,15 @@
 Stanford Open Policing EDA
 ================
 
+The
+[README](https://github.com/5harad/openpolicing/blob/master/DATA-README.md)
+describes the data in more detail. The datasets provided are cleaned
+versions in a fairly tidy format; each row denotes one stop, each column
+denotes a variable, and each cell denotes a value. Columns denoted with
+\*\_raw are original data values, which are standardized to the
+corresponding \* columns. Since there are differences across datasets
+from state to state, the WI dataset is explored more in depth.
+
 ## A first glimpse
 
 The dataset contains 1,059,033 rows and 27 columns.
@@ -116,7 +125,7 @@ d %>% summary()
     ##                    
     ## 
 
-## Verifying id is the primary key
+## id is the primary key
 
 The variable id is the primary key which uniquely identifies each stop.
 
@@ -129,9 +138,14 @@ d %>%
     ## # A tibble: 0 x 2
     ## # ... with 2 variables: id <chr>, n <int>
 
-## Verifying each stop in WI
+## state all WI
 
-Each observation was in WI.
+Each observation’s state is WI. The
+[documentation](https://github.com/5harad/openpolicing/blob/master/DATA-README.md)
+states this variable is “the two-letter code for the state in which the
+stop occurred.” Note that this conflicts with some results found by
+looking at latitude/longitude, where some stops were outside WI borders
+in neighboring states.
 
 ``` r
 # each stop was in WI
@@ -154,15 +168,175 @@ nrow(d)
 
 ## Stop dates
 
-TODO: explore by year/month/day?
+The following explores the number of stops made by day, year, and month.
+
+``` r
+# days in dataset with most stops
+d %>%
+  group_by(stop_date) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+    ## # A tibble: 2,073 x 2
+    ## # Groups:   stop_date [2,073]
+    ##    stop_date      n
+    ##    <date>     <int>
+    ##  1 2013-05-24  1445
+    ##  2 2011-05-27  1349
+    ##  3 2012-08-31  1308
+    ##  4 2011-05-28  1247
+    ##  5 2012-05-25  1228
+    ##  6 2011-05-29  1218
+    ##  7 2013-05-25  1205
+    ##  8 2012-09-01  1203
+    ##  9 2013-05-26  1186
+    ## 10 2011-05-30  1183
+    ## # ... with 2,063 more rows
+
+The amount of stops for 2011 - 2015 is comparable. There are less stops
+in the dataset for 2010, and the data for 2016 stops at 5/16/2016.
+
+``` r
+# most stops by year
+d %>%
+  select(stop_date) %>% 
+  transmute(yr = year(stop_date)) %>% 
+  group_by(yr) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+    ## # A tibble: 8 x 2
+    ## # Groups:   yr [8]
+    ##      yr      n
+    ##   <dbl>  <int>
+    ## 1  2012 219988
+    ## 2  2013 195790
+    ## 3  2011 195719
+    ## 4  2014 184481
+    ## 5  2015 183832
+    ## 6  2016  73161
+    ## 7  2010   5976
+    ## 8    NA     86
+
+Months with largest amount of stops. Note this includes 2010 and 2016.
+
+``` r
+# most stops by month
+d %>%
+  select(stop_date) %>% 
+  transmute(month = month(stop_date)) %>% 
+  group_by(month) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+    ## # A tibble: 13 x 2
+    ## # Groups:   month [13]
+    ##    month      n
+    ##    <dbl>  <int>
+    ##  1  5.00 109510
+    ##  2  4.00  97360
+    ##  3  3.00  96530
+    ##  4  1.00  92452
+    ##  5  7.00  92213
+    ##  6  9.00  89608
+    ##  7  8.00  85671
+    ##  8  2.00  85619
+    ##  9 10.0   84223
+    ## 10  6.00  82979
+    ## 11 11.0   74304
+    ## 12 12.0   68478
+    ## 13 NA        86
+
+Days of the week with largest amount of stops. Note this includes 2010
+and 2016.
+
+``` r
+# most stops by day of the week
+d %>%
+  select(stop_date) %>% 
+  transmute(day = wday(stop_date, label = TRUE)) %>% 
+  group_by(day) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+    ## # A tibble: 8 x 2
+    ## # Groups:   day [8]
+    ##   day        n
+    ##   <ord>  <int>
+    ## 1 Sat   178788
+    ## 2 Sun   169625
+    ## 3 Fri   168439
+    ## 4 Thu   139460
+    ## 5 Wed   135002
+    ## 6 Tue   134982
+    ## 7 Mon   132651
+    ## 8 <NA>      86
+
+Days of the month with largest amount of stops. Note this includes 2010
+and 2016.
+
+``` r
+# most stops by day of the month
+d %>%
+  select(stop_date) %>% 
+  transmute(day = mday(stop_date)) %>% 
+  group_by(day) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+    ## # A tibble: 32 x 2
+    ## # Groups:   day [32]
+    ##      day     n
+    ##    <int> <int>
+    ##  1     7 36316
+    ##  2     6 36274
+    ##  3     4 36273
+    ##  4     2 35988
+    ##  5     1 35983
+    ##  6    25 35895
+    ##  7    27 35757
+    ##  8     5 35694
+    ##  9     8 35491
+    ## 10    24 35313
+    ## # ... with 22 more rows
 
 ## Stop times
 
-TODO: explore by hour?
+Which hours are the most number of stops made?
 
-## Location
+``` r
+d %>% 
+  group_by(hour(stop_time)) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
 
-The counties with the highest frequency of stops.
+    ## # A tibble: 25 x 2
+    ## # Groups:   hour(stop_time) [25]
+    ##    `hour(stop_time)`      n
+    ##                <int>  <int>
+    ##  1                NA 286411
+    ##  2                16  58567
+    ##  3                10  52783
+    ##  4                17  52314
+    ##  5                13  52250
+    ##  6                12  50407
+    ##  7                 9  49345
+    ##  8                15  47570
+    ##  9                11  46648
+    ## 10                18  43313
+    ## # ... with 15 more rows
+
+## Geographic: location\_raw, county\_name, county\_fips, fine\_grained\_location
+
+The counties with the highest frequency of stops. The column
+county\_name is the name of the county, while county\_fips is the
+corresponding FIPS code.
 
 ``` r
 d %>%
@@ -211,7 +385,9 @@ d %>%
     ## # ... with 62 more rows
 
 Note county\_name = location\_raw + " County“. These columns are
-repetitive, so one of these can be dropped.
+repetitive, so one of these can be dropped. location\_raw is the
+original values from which the standardized county name and FIPS code is
+obtained.
 
 ``` r
 # location_raw is part of county_name before " County"
@@ -240,42 +416,78 @@ d %>%
     ##   <chr>         <int>
     ## 1 " County"   1059033
 
+More specific information about the location is provided with
+fine\_grained\_location. Below is a simplistic view of where the largest
+number of stops occurred. Note there are many NAs and more in-depth
+analysis can be done.
+
+``` r
+# the last word of county_name is always "County"
+d %>%
+  group_by(fine_grained_location) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+    ## # A tibble: 92,283 x 2
+    ## # Groups:   fine_grained_location [92,283]
+    ##    fine_grained_location     n
+    ##    <chr>                 <int>
+    ##  1 W 094 NA              25117
+    ##  2 E 094 NA              24850
+    ##  3 N 041 NA              15812
+    ##  4 NA NA NA              15742
+    ##  5 N 039 NA              14535
+    ##  6 S 039 NA              13599
+    ##  7 N 043 NA              11662
+    ##  8 S 041 NA              11007
+    ##  9 W 090 NA               9955
+    ## 10 E 090 NA               6470
+    ## # ... with 92,273 more rows
+
 ## Police department
+
+Departments which made the most number of stops.
 
 ``` r
 d %>% 
   group_by(police_department) %>% 
-  count()
+  count() %>% 
+  arrange(desc(n))
 ```
 
     ## # A tibble: 9 x 2
     ## # Groups:   police_department [9]
     ##   police_department            n
     ##   <chr>                    <int>
-    ## 1 WI STATE PATROL NCR/WSA  36022
-    ## 2 WI STATE PATROL NER/FON  36585
+    ## 1 WISCONSIN STATE PATROL  772699
+    ## 2 WI STATE PATROL SWR/DEF  82733
     ## 3 WI STATE PATROL NWR/EAU  47223
-    ## 4 WI STATE PATROL NWR/SPO  17154
-    ## 5 WI STATE PATROL SER/WKE  33894
-    ## 6 WI STATE PATROL SWR/DEF  82733
+    ## 4 WI STATE PATROL NER/FON  36585
+    ## 5 WI STATE PATROL NCR/WSA  36022
+    ## 6 WI STATE PATROL SER/WKE  33894
     ## 7 WI STATE PATROL SWR/TOM  32713
-    ## 8 WISCONSIN STATE PATROL  772699
+    ## 8 WI STATE PATROL NWR/SPO  17154
     ## 9 ZWI STATE PATROL            10
 
 ## Driver gender
 
+Males in WI were stopped more often than females. There are also a
+significant number of NAs.
+
 ``` r
 d %>% 
   group_by(driver_gender) %>% 
-  count()
+  count() %>% 
+  arrange(desc(n))
 ```
 
     ## # A tibble: 3 x 2
     ## # Groups:   driver_gender [3]
     ##   driver_gender      n
     ##   <chr>          <int>
-    ## 1 F             305575
-    ## 2 M             600597
+    ## 1 M             600597
+    ## 2 F             305575
     ## 3 <NA>          152861
 
 ## Driver age
@@ -319,39 +531,46 @@ d %>%
 # What is O? 
 d %>%
   group_by(driver_race_raw) %>% 
-  count()
+  count() %>% 
+  arrange(desc(n))
 ```
 
     ## # A tibble: 7 x 2
     ## # Groups:   driver_race_raw [7]
     ##   driver_race_raw      n
     ##   <chr>            <int>
-    ## 1 A                24577
-    ## 2 B                56050
-    ## 3 H                35210
-    ## 4 I                11361
-    ## 5 O                   11
-    ## 6 W               778227
-    ## 7 <NA>            153597
+    ## 1 W               778227
+    ## 2 <NA>            153597
+    ## 3 B                56050
+    ## 4 H                35210
+    ## 5 A                24577
+    ## 6 I                11361
+    ## 7 O                   11
 
 ``` r
 d %>%
   group_by(driver_race) %>% 
-  count()
+  count() %>% 
+  arrange(desc(n))
 ```
 
     ## # A tibble: 6 x 2
     ## # Groups:   driver_race [6]
     ##   driver_race      n
     ##   <chr>        <int>
-    ## 1 Asian        24577
-    ## 2 Black        56050
-    ## 3 Hispanic     35210
-    ## 4 Other        11361
-    ## 5 White       778227
-    ## 6 <NA>        153608
+    ## 1 White       778227
+    ## 2 <NA>        153608
+    ## 3 Black        56050
+    ## 4 Hispanic     35210
+    ## 5 Asian        24577
+    ## 6 Other        11361
 
 ## Violations
+
+violation\_raw denotes the original data values, while violation is the
+standardized category of the violation. Note that some stops contain
+multiple violations; to explore this more in-depth, cases with multiple
+violations could be split.
 
 ``` r
 # most common violations (specific)
@@ -436,6 +655,8 @@ identical(d$search_type, d$search_type_raw)
     ## [1] TRUE
 
 ## Stop outcome
+
+For stops with multiple outcomes, the value is the most severe outcome.
 
 ``` r
 d %>% 

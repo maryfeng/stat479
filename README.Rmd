@@ -6,8 +6,11 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(lubridate)
 d = read_csv('WI-clean.csv', col_types = list(county_fips = 'c', officer_id = 'c'))
 ```
+
+The [README](https://github.com/5harad/openpolicing/blob/master/DATA-README.md) describes the data in more detail. The datasets provided are cleaned versions in a fairly tidy format; each row denotes one stop, each column denotes a variable, and each cell denotes a value. Columns denoted with \*_raw are original data values, which are standardized to the corresponding \* columns. Since there are differences across datasets from state to state, the WI dataset is explored more in depth.
 
 ## A first glimpse
 
@@ -19,7 +22,7 @@ d %>% glimpse
 d %>% summary()
 ```
 
-## Verifying id is the primary key
+## id is the primary key
 The variable id is the primary key which uniquely identifies each stop.
 ```{r}
 d %>% 
@@ -27,8 +30,8 @@ d %>%
   filter(n > 1)
 ```
 
-## Verifying each stop in WI
-Each observation was in WI.
+## state all WI
+Each observation's state is WI. The [documentation](https://github.com/5harad/openpolicing/blob/master/DATA-README.md) states this variable is "the two-letter code for the state in which the stop occurred." Note that this conflicts with some results found by looking at latitude/longitude, where some stops were outside WI borders in neighboring states.
 ```{r}
 # each stop was in WI
 d %>% 
@@ -38,13 +41,70 @@ nrow(d)
 ```
 
 ## Stop dates
-TODO: explore by year/month/day?
+The following explores the number of stops made by day, year, and month.
+```{r}
+# days in dataset with most stops
+d %>%
+  group_by(stop_date) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+The amount of stops for 2011 - 2015 is comparable. There are less stops in the dataset for 2010, and the data for 2016 stops at 5/16/2016.
+```{r}
+# most stops by year
+d %>%
+  select(stop_date) %>% 
+  transmute(yr = year(stop_date)) %>% 
+  group_by(yr) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+Months with largest amount of stops. Note this includes 2010 and 2016.
+```{r}
+# most stops by month
+d %>%
+  select(stop_date) %>% 
+  transmute(month = month(stop_date)) %>% 
+  group_by(month) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+Days of the week with largest amount of stops. Note this includes 2010 and 2016.
+```{r}
+# most stops by day of the week
+d %>%
+  select(stop_date) %>% 
+  transmute(day = wday(stop_date, label = TRUE)) %>% 
+  group_by(day) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+Days of the month with largest amount of stops. Note this includes 2010 and 2016.
+```{r}
+# most stops by day of the month
+d %>%
+  select(stop_date) %>% 
+  transmute(day = mday(stop_date)) %>% 
+  group_by(day) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
 
 ## Stop times
-TODO: explore by hour? 
+Which hours are the most number of stops made?
+```{r}
+d %>% 
+  group_by(hour(stop_time)) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
 
-## Location
-The counties with the highest frequency of stops.
+## Geographic: location_raw, county_name, county_fips, fine_grained_location
+The counties with the highest frequency of stops. The column county_name is the name of the county, while county_fips is the corresponding FIPS code.
 ```{r}
 d %>%
   group_by(county_name) %>% 
@@ -56,7 +116,7 @@ d %>%
   arrange(desc(n))
 ```
 
-Note county_name = location_raw + " County". These columns are repetitive, so one of these can be dropped.
+Note county_name = location_raw + " County". These columns are repetitive, so one of these can be dropped. location_raw is the original values from which the standardized county name and FIPS code is obtained.
 ```{r}
 # location_raw is part of county_name before " County"
 d %>%
@@ -75,18 +135,31 @@ d %>%
   count()
 ```
 
+More specific information about the location is provided with fine_grained_location. Below is a simplistic view of where the largest number of stops occurred. Note there are many NAs and more in-depth analysis can be done.
+```{r}
+# the last word of county_name is always "County"
+d %>%
+  group_by(fine_grained_location) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
 ## Police department
+Departments which made the most number of stops.
 ```{r}
 d %>% 
   group_by(police_department) %>% 
-  count()
+  count() %>% 
+  arrange(desc(n))
 ```
 
 ## Driver gender
+Males in WI were stopped more often than females. There are also a significant number of NAs.
 ```{r}
 d %>% 
   group_by(driver_gender) %>% 
-  count()
+  count() %>% 
+  arrange(desc(n))
 ```
 
 
@@ -113,13 +186,16 @@ d %>%
 # What is O? 
 d %>%
   group_by(driver_race_raw) %>% 
-  count()
+  count() %>% 
+  arrange(desc(n))
 d %>%
   group_by(driver_race) %>% 
-  count()
+  count() %>% 
+  arrange(desc(n))
 ```
 
 ## Violations
+violation_raw denotes the original data values, while violation is the standardized category of the violation. Note that some stops contain multiple violations; to explore this more in-depth, cases with multiple violations could be split.
 ```{r}
 # most common violations (specific)
 d %>% 
@@ -147,6 +223,7 @@ identical(d$search_type, d$search_type_raw)
 ```
 
 ## Stop outcome
+For stops with multiple outcomes, the value is the most severe outcome.
 ```{r}
 d %>% 
   group_by(stop_outcome) %>% 
