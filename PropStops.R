@@ -31,3 +31,14 @@ head(stopbyofficer)
 # what counties are top stoppers in?
 # start with top cop, id 2286.
 unique(d[d$officer_id == "2286",]$county_name) # 18 counties!
+
+# is it possible to make a map of which officers have stopped in what counties?
+# try the top cop first
+library(choroplethr)
+library(choroplethrMaps) 
+# first, need to make a county, # stops df for officer 2286.
+officertop = d[d$officer_id == "2286",] %>% group_by(county_fips) %>% count() 
+colnames(officertop) = c("region", "value")
+officertop$region = as.numeric(officertop$region)
+# map of first officer - all blacked out counties have no stops
+county_choropleth(df = officertop, state_zoom = "wisconsin", title = "Stops by Officer 2286")
