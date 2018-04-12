@@ -41,4 +41,20 @@ officertop = d[d$officer_id == "2286",] %>% group_by(county_fips) %>% count()
 colnames(officertop) = c("region", "value")
 officertop$region = as.numeric(officertop$region)
 # map of first officer - all blacked out counties have no stops
-county_choropleth(df = officertop, state_zoom = "wisconsin", title = "Stops by Officer 2286")
+county_choropleth(df = officertop, state_zoom = "wisconsin", title = "Stops by Officer 2286") 
+
+# second officer, just because
+officer2072 = d[d$officer_id == "2072",] %>% group_by(county_fips) %>% count() 
+colnames(officer2072) = c("region", "value")
+officer2072$region = as.numeric(officer2072$region)
+county_choropleth(df = officer2072, state_zoom = "wisconsin", title = "Stops by Officer 2072")
+# this officer did 33% of the stops in county 55139.
+
+# function to plot any officer - make sure to put ID in quotes to run
+mapstops = function(officerid) {
+  officer = d[d$officer_id == officerid,] %>% group_by(county_fips) %>% count() 
+  colnames(officer) = c("region", "value")
+  officer$region = as.numeric(officer$region)
+  county_choropleth(df = officer, state_zoom = "wisconsin", 
+                    title = paste("Stops by Officer", officerid))
+}
