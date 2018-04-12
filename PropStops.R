@@ -58,3 +58,6 @@ mapstops = function(officerid) {
   county_choropleth(df = officer, state_zoom = "wisconsin", 
                     title = paste("Stops by Officer", officerid))
 }
+
+# example - this one has a crazy map
+mapstops("2176")
