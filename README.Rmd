@@ -288,10 +288,6 @@ d %>%
   summarise(missingRaceRatio = mean(missingRace == TRUE), count = n()) %>% 
   arrange(desc(count))
 ```
-For the officer who made the largest amount of stops in the dataset, the plot below shows which counties he/she frequented throughout the duration of the dataset.
-```{r}
-mapstops('2286')
-```
 
 ## Missing race data by police department
 Stops where the police_department is Wisconsin State Patrol have a surprisingly small amount of missing race values, while stops where the police_department is more specific tend to have higher instances of race missing.

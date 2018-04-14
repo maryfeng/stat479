@@ -447,7 +447,21 @@ d %>%
 
 ## Police department
 
-Departments which made the most number of stops.
+Departments which made the most number of stops. We speculate that
+Wisconsin State Patrol is a general category, while WI State Patrol
+<region>/<office> are more specific. The [Wisconsin DOT
+website](http://wisconsindot.gov/Pages/about-wisdot/who-we-are/dsp/loc-contact.aspx)
+indicates the various regions – Southwest, Southeast, Northeast, North
+Central, Northwest, which correspond to the abbreviations SWR, SER, NER,
+NCR, and NWR below, respectively. Based on the same page previously and
+the [Wikipedia
+page](https://en.wikipedia.org/wiki/Wisconsin_State_Patrol#The_State_Patrol_today),
+there are “offices in DeForest (Madison), Waukesha, Fond du Lac, Wausau,
+Tomah, Eau Claire and Spooner”, which correspond to the abbreviations
+DEF, WKE, FON, WSA, TOM, EAU, and SPO.
+
+It is unclear what ZWI State Patrol refers to; this may be some sort of
+error in the data.
 
 ``` r
 d %>% 
@@ -838,3 +852,82 @@ d %>%
     ##  9 TOYOTA NA NA                1288
     ## 10 CHEVROLET NA 2004           1242
     ## # ... with 87,945 more rows
+
+## Missing race data by officer
+
+The following is sorted in descending order by number of stops an
+officer has made, and missingRaceRatio indicates what proportion of
+their total stops is missing race.
+
+``` r
+d %>% 
+  mutate(missingRace = is.na(driver_race)) %>% 
+  group_by(officer_id) %>% 
+  summarise(missingRaceRatio = mean(missingRace == TRUE), count = n()) %>% 
+  arrange(desc(count))
+```
+
+    ## # A tibble: 549 x 3
+    ##    officer_id missingRaceRatio count
+    ##    <chr>                 <dbl> <int>
+    ##  1 2286                0.110   10786
+    ##  2 2072                0.216   10022
+    ##  3 2077                0.138    8254
+    ##  4 2195                0.231    7801
+    ##  5 2187                0.0420   7479
+    ##  6 2347                0.00406  7144
+    ##  7 2147                0.261    6742
+    ##  8 2339                0.170    6576
+    ##  9 2180                0.261    6389
+    ## 10 2120                0.0188   6369
+    ## # ... with 539 more rows
+
+## Missing race data by police department
+
+Stops where the police\_department is Wisconsin State Patrol have a
+surprisingly small amount of missing race values, while stops where the
+police\_department is more specific tend to have higher instances of
+race missing.
+
+``` r
+d %>% 
+  mutate(missingRace = is.na(driver_race)) %>% 
+  group_by(police_department) %>% 
+  summarise(missingRaceRatio = mean(missingRace == TRUE), count = n()) %>% 
+  arrange(desc(count))
+```
+
+    ## # A tibble: 9 x 3
+    ##   police_department       missingRaceRatio  count
+    ##   <chr>                              <dbl>  <int>
+    ## 1 WISCONSIN STATE PATROL           0.00219 772699
+    ## 2 WI STATE PATROL SWR/DEF          0.423    82733
+    ## 3 WI STATE PATROL NWR/EAU          0.518    47223
+    ## 4 WI STATE PATROL NER/FON          0.526    36585
+    ## 5 WI STATE PATROL NCR/WSA          0.535    36022
+    ## 6 WI STATE PATROL SER/WKE          0.440    33894
+    ## 7 WI STATE PATROL SWR/TOM          0.824    32713
+    ## 8 WI STATE PATROL NWR/SPO          0.700    17154
+    ## 9 ZWI STATE PATROL                 0.500       10
+
+## Stops with missing race data tend to miss other information about stop
+
+It seems to be the case that stops with missing information about driver
+race often are missing other information about the stop overall,
+including driver gender, whether or not a search was conducted, stop
+time, and information about the vehicle (manufacturer, model, and year
+all missing). Unfortunately, all values for driver age are missing in
+the dataset, otherwise that could be explored as well.
+
+``` r
+missingRace <- d %>% filter(is.na(driver_race))
+sprintf("Number of stops with missing race: %s", missingRace %>% nrow()) 
+```
+
+    ## [1] "Number of stops with missing race: 153608"
+
+``` r
+sprintf("Number of stops with missing race, gender, search conducted, stop time, vehicle information: %s", d %>% filter(is.na(driver_race), is.na(driver_gender), is.na(search_conducted), is.na(stop_time), vehicle_type == "NA NA NA") %>% nrow())
+```
+
+    ## [1] "Number of stops with missing race, gender, search conducted, stop time, vehicle information: 133372"
