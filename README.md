@@ -855,60 +855,32 @@ d %>%
 
 ## Missing race data by officer
 
-The following is sorted in descending order by number of stops an
-officer has made, and missingRaceRatio indicates what proportion of
-their total stops is missing race.
+The following is sorted in descending order by number of stops with
+missing race an officer has made, and missingRaceRatio indicates what
+proportion of their total stops is missing race.
 
 ``` r
 d %>% 
   mutate(missingRace = is.na(driver_race)) %>% 
   group_by(officer_id) %>% 
-  summarise(missingRaceRatio = mean(missingRace == TRUE), count = n()) %>% 
-  arrange(desc(count))
+  summarise(missingRaceRatio = mean(missingRace == TRUE), numMissing = sum(missingRace), numStops = n()) %>% 
+  arrange(desc(numMissing))
 ```
 
-    ## # A tibble: 549 x 3
-    ##    officer_id missingRaceRatio count
-    ##    <chr>                 <dbl> <int>
-    ##  1 2286                0.110   10786
-    ##  2 2072                0.216   10022
-    ##  3 2077                0.138    8254
-    ##  4 2195                0.231    7801
-    ##  5 2187                0.0420   7479
-    ##  6 2347                0.00406  7144
-    ##  7 2147                0.261    6742
-    ##  8 2339                0.170    6576
-    ##  9 2180                0.261    6389
-    ## 10 2120                0.0188   6369
+    ## # A tibble: 549 x 4
+    ##    officer_id missingRaceRatio numMissing numStops
+    ##    <chr>                 <dbl>      <int>    <int>
+    ##  1 2588                  0.942       3403     3612
+    ##  2 2072                  0.216       2160    10022
+    ##  3 2613                  0.981       1944     1981
+    ##  4 2195                  0.231       1804     7801
+    ##  5 1763                  0.288       1793     6220
+    ##  6 2609                  0.899       1769     1967
+    ##  7 2525                  0.314       1764     5618
+    ##  8 2147                  0.261       1760     6742
+    ##  9 2514                  0.465       1724     3708
+    ## 10 2352                  0.347       1685     4860
     ## # ... with 539 more rows
-
-## Missing race data by police department
-
-Stops where the police\_department is Wisconsin State Patrol have a
-surprisingly small amount of missing race values, while stops where the
-police\_department is more specific tend to have higher instances of
-race missing.
-
-``` r
-d %>% 
-  mutate(missingRace = is.na(driver_race)) %>% 
-  group_by(police_department) %>% 
-  summarise(missingRaceRatio = mean(missingRace == TRUE), count = n()) %>% 
-  arrange(desc(count))
-```
-
-    ## # A tibble: 9 x 3
-    ##   police_department       missingRaceRatio  count
-    ##   <chr>                              <dbl>  <int>
-    ## 1 WISCONSIN STATE PATROL           0.00219 772699
-    ## 2 WI STATE PATROL SWR/DEF          0.423    82733
-    ## 3 WI STATE PATROL NWR/EAU          0.518    47223
-    ## 4 WI STATE PATROL NER/FON          0.526    36585
-    ## 5 WI STATE PATROL NCR/WSA          0.535    36022
-    ## 6 WI STATE PATROL SER/WKE          0.440    33894
-    ## 7 WI STATE PATROL SWR/TOM          0.824    32713
-    ## 8 WI STATE PATROL NWR/SPO          0.700    17154
-    ## 9 ZWI STATE PATROL                 0.500       10
 
 ## Stops with missing race data tend to miss other information about stop
 
@@ -931,3 +903,135 @@ sprintf("Number of stops with missing race, gender, search conducted, stop time,
 ```
 
     ## [1] "Number of stops with missing race, gender, search conducted, stop time, vehicle information: 133372"
+
+For instance, stops missing driver race is often missing driver gender.
+
+``` r
+d %>% 
+  mutate(missingRace = is.na(driver_race)) %>%
+  group_by(driver_gender) %>% 
+  summarise(missingRaceRatio = mean(missingRace == TRUE), numMissing = sum(missingRace), numStops = n()) %>% 
+  arrange(desc(numMissing))
+```
+
+    ## # A tibble: 3 x 4
+    ##   driver_gender missingRaceRatio numMissing numStops
+    ##   <chr>                    <dbl>      <int>    <int>
+    ## 1 <NA>                  1.000        152854   152861
+    ## 2 M                     0.000899        540   600597
+    ## 3 F                     0.000700        214   305575
+
+Stops missing whether a search was conducted is often missing driver
+race.
+
+``` r
+d %>% 
+  mutate(missingRace = is.na(driver_race)) %>%
+  group_by(search_conducted) %>% 
+  summarise(missingRaceRatio = mean(missingRace == TRUE), numMissing = sum(missingRace), numStops = n()) %>% 
+  arrange(desc(numMissing))
+```
+
+    ## # A tibble: 3 x 4
+    ##   search_conducted missingRaceRatio numMissing numStops
+    ##   <lgl>                       <dbl>      <int>    <int>
+    ## 1 NA                        1.00        151771   151771
+    ## 2 F                         0.00187       1668   892928
+    ## 3 T                         0.0118         169    14334
+
+## Missing race by year: Proportion of stops with missing race data increases over time
+
+Note that 2010 is thrown out since there is less data about stops in
+2010 (\< 6000). It seems that the proportion of stops with missing race
+information is increasing as time goes on; earlier years like 2011 and
+2012 have more information regarding race, while later years like 2015
+and 2016 have more missing race more frequently. Most years have a
+comparable amount of stops (all around 200,000, except for 2016 since it
+is missing the last several months).
+
+``` r
+missingRaceByYear <- d %>% 
+  mutate(missingRace = is.na(driver_race)) %>% 
+  mutate(yr = year(stop_date)) %>% 
+  filter(!is.na(yr), yr != 2010) %>% 
+  group_by(yr) %>% 
+  summarise(missingRaceRatio = mean(missingRace == TRUE), numMissing = sum(missingRace), numStops = n()) %>% 
+  arrange(desc(missingRaceRatio))
+missingRaceByYear
+```
+
+    ## # A tibble: 6 x 4
+    ##      yr missingRaceRatio numMissing numStops
+    ##   <dbl>            <dbl>      <int>    <int>
+    ## 1  2015         0.543         99769   183832
+    ## 2  2016         0.475         34716    73161
+    ## 3  2014         0.0961        17728   184481
+    ## 4  2013         0.00280         549   195790
+    ## 5  2012         0.00272         599   219988
+    ## 6  2011         0.000582        114   195719
+
+``` r
+missingRaceByYear %>% ggplot(mapping = aes(x = yr, y = missingRaceRatio)) +
+    geom_line()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+
+## Missing race by county
+
+Race information seems to be missing fairly uniformly throughout
+counties. That is, the number of missing stops roughly follows the
+pattern of counties with a large number of stops overall.
+
+``` r
+d %>% 
+  mutate(missingRace = is.na(driver_race)) %>%
+  group_by(county_name) %>% 
+  summarise(missingRaceRatio = mean(missingRace == TRUE), numMissing = sum(missingRace), numStops = n()) %>% 
+  arrange(desc(numMissing))
+```
+
+    ## # A tibble: 72 x 4
+    ##    county_name      missingRaceRatio numMissing numStops
+    ##    <chr>                       <dbl>      <int>    <int>
+    ##  1 Dane County                 0.198      13714    69269
+    ##  2 Monroe County               0.227      10938    48139
+    ##  3 St. Croix County            0.201       7665    38144
+    ##  4 Juneau County               0.214       6268    29249
+    ##  5 La Crosse County            0.190       5233    27608
+    ##  6 Jefferson County            0.140       5045    36006
+    ##  7 Winnebago County            0.158       4703    29709
+    ##  8 Sauk County                 0.173       4357    25176
+    ##  9 Waukesha County             0.181       4239    23456
+    ## 10 Jackson County              0.128       4167    32547
+    ## # ... with 62 more rows
+
+## Missing race data by police department
+
+Stops where the police\_department is Wisconsin State Patrol have a
+surprisingly small amount of missing race values, while stops where the
+police\_department is more specific tend to have higher instances of
+race missing. Police departments SWR/TOM and NWR/SPO has higher
+proportion of missing race data, while the other departments have around
+half of their stops missing race information.
+
+``` r
+d %>% 
+  mutate(missingRace = is.na(driver_race)) %>%
+  group_by(police_department) %>% 
+  summarise(missingRaceRatio = mean(missingRace == TRUE), numMissing = sum(missingRace), numStops = n()) %>% 
+  arrange(desc(numMissing))
+```
+
+    ## # A tibble: 9 x 4
+    ##   police_department       missingRaceRatio numMissing numStops
+    ##   <chr>                              <dbl>      <int>    <int>
+    ## 1 WI STATE PATROL SWR/DEF          0.423        35017    82733
+    ## 2 WI STATE PATROL SWR/TOM          0.824        26963    32713
+    ## 3 WI STATE PATROL NWR/EAU          0.518        24443    47223
+    ## 4 WI STATE PATROL NCR/WSA          0.535        19285    36022
+    ## 5 WI STATE PATROL NER/FON          0.526        19262    36585
+    ## 6 WI STATE PATROL SER/WKE          0.440        14926    33894
+    ## 7 WI STATE PATROL NWR/SPO          0.700        12015    17154
+    ## 8 WISCONSIN STATE PATROL           0.00219       1692   772699
+    ## 9 ZWI STATE PATROL                 0.500            5       10
