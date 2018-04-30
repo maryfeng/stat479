@@ -23,6 +23,35 @@ ui <- fluidPage(
       withSpinner(leafletOutput("mappedData"))
     )
   ),
+  # checkboxes to build model
+  fluidRow(
+    column(12, align = "center", 
+           h3("Build your own model", align = "center"),
+           checkboxGroupInput("checkGroup", label = h4("Select variables to include in model"), 
+                              choices = list("county_fips" = "county_fips",
+                                             "police_department" = "police_department", 
+                                             "driver_gender" = "driver_gender",
+                                             "search_conducted" = "search_conducted", 
+                                             "stop_outcome" = "stop_outcome",
+                                             "year" = "year", 
+                                             "month" = "month", 
+                                             "num_violations" = "num_violations",
+                                             "population" = "population", 
+                                             "area" = "area", 
+                                             "percentMinority" = "percentMinority",
+                                             "percentPoverty" = "percentPoverty"),
+                              inline = TRUE,
+                              selected = "year"),
+           actionButton(
+             inputId = "submit_loc",
+             label = "Submit"
+           ),
+           hr(),
+           fluidRow(column(6, verbatimTextOutput("conMat")),
+                    column(6, plotOutput("roc")))
+    )
+  ),
+  
   fluidRow(
     column(12, align = "center", 
            h3("2014-2015: When did the officers stop recording race data?", align = "center"),

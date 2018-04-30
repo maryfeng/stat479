@@ -1,29 +1,31 @@
+# required libraries: caret, rocr, tidyverse
+
 server <- function(input, output) {
   
   output$mappedData <- renderLeaflet({
     
-    filteredData <- trafficStops %>% filter(!grepl("2010",stop_date))
+    filteredData <- trafficStops %>% filter(year != 2010)
     
     if(input$slider == 2011){
-      filteredData <- trafficStops %>% filter(grepl("2011",stop_date))
+      filteredData <- trafficStops %>% filter(year == 2011)
     }
     else if(input$slider == 2012){
-      filteredData <- trafficStops %>% filter(grepl("2012",stop_date))
+      filteredData <- trafficStops %>% filter(year == 2012)
     }
     else if(input$slider == 2013){
-      filteredData <- trafficStops %>% filter(grepl("2013",stop_date))
+      filteredData <- trafficStops %>% filter(year == 2013)
     }
     else if(input$slider == 2014){
-      filteredData <- trafficStops %>% filter(grepl("2014",stop_date))
+      filteredData <- trafficStops %>% filter(year == 2014)
     }
     else if(input$slider == 2015){
-      filteredData <- trafficStops %>% filter(grepl("2015",stop_date))
+      filteredData <- trafficStops %>% filter(year == 2015)
     }
     else if(input$slider == 2016){
-      filteredData <- trafficStops %>% filter(grepl("2016",stop_date))
+      filteredData <- trafficStops %>% filter(year == 2016)
     }
-    prop <- filteredData %>% group_by(county_fips, raceMissing) %>% summarise (n = n()) %>%
-      mutate(ProportionMissing = n / sum(n)) %>% filter(raceMissing == T)
+    prop <- filteredData %>% group_by(county_fips, missingRace) %>% summarise (n = n()) %>%
+      mutate(ProportionMissing = n / sum(n)) %>% filter(missingRace == T)
     prop <- prop %>% select(county_fips, n, ProportionMissing)
     wiGeo <- merge(wi, prop, by.x = "county_fips", by.y = "county_fips")
     
@@ -60,5 +62,47 @@ server <- function(input, output) {
           direction = "auto")) %>% 
       addLegend(pal = pal, values = ~ProportionMissing, opacity = 0.7, title = "Proportion Missing Race ",
                 position = "bottomleft")
-  })
+  }) 
+  
+  # build model from user selected checkboxes
+  observeEvent(
+    eventExpr = input[["submit_loc"]],
+    handlerExpr = {
+      
+      Train <- reactive({
+        createDataPartition(data$missingRace, p=0.7, list=FALSE)
+      })
+      training <- reactive({
+        data[ Train(), ]
+      })
+      testing <- reactive({
+        data[ -Train(), ]
+      })
+      
+      mod_fit <- reactive({
+        progress <- shiny::Progress$new()
+        on.exit(progress$close())
+        progress$set(message = 'Building model', detail = 'This may take a while...')
+        ctrl <- trainControl(method = "none", savePredictions = TRUE)
+        train(as.formula(paste("missingRace ~",paste(isolate(input$checkGroup),collapse="+"))), data=training(), method="glm", family="binomial", trControl = ctrl)
+      })
+      
+      pred <- reactive({
+        predict(mod_fit(), newdata=testing())
+      })
+      
+      output$conMat <- renderPrint({ 
+        confusionMatrix(data=pred(), testing()$missingRace, positive = "TRUE")
+      })
+      
+      output$roc <- renderPlot({ 
+        pr <- prediction(as.numeric(pred()), as.numeric(testing()$missingRace))
+        prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+        plot(prf, main="ROC Curve") 
+      })
+      reset("submit_loc")
+    }
+  )
+
+  
 }
