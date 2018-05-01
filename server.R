@@ -1,28 +1,35 @@
-# required libraries: caret, rocr, tidyverse
-
+load("data.RData")
+load("geoData.Rdata")
+library(shinycssloaders)
+library(shinyjs)
+library(caret)
+library(ROCR)
+library(RColorBrewer)
+library(leaflet)
+library(tidyverse)
+library(shiny)
+library(e1071)
 server <- function(input, output) {
   
   output$mappedData <- renderLeaflet({
     
-    filteredData <- trafficStops %>% filter(year != 2010)
-    
     if(input$slider == 2011){
-      filteredData <- trafficStops %>% filter(year == 2011)
+      filteredData <- data %>% filter(year == 2011)
     }
     else if(input$slider == 2012){
-      filteredData <- trafficStops %>% filter(year == 2012)
+      filteredData <- data %>% filter(year == 2012)
     }
     else if(input$slider == 2013){
-      filteredData <- trafficStops %>% filter(year == 2013)
+      filteredData <- data %>% filter(year == 2013)
     }
     else if(input$slider == 2014){
-      filteredData <- trafficStops %>% filter(year == 2014)
+      filteredData <- data %>% filter(year == 2014)
     }
     else if(input$slider == 2015){
-      filteredData <- trafficStops %>% filter(year == 2015)
+      filteredData <- data %>% filter(year == 2015)
     }
     else if(input$slider == 2016){
-      filteredData <- trafficStops %>% filter(year == 2016)
+      filteredData <- data %>% filter(year == 2016)
     }
     prop <- filteredData %>% group_by(county_fips, missingRace) %>% summarise (n = n()) %>%
       mutate(ProportionMissing = n / sum(n)) %>% filter(missingRace == T)
@@ -62,7 +69,8 @@ server <- function(input, output) {
           direction = "auto")) %>% 
       addLegend(pal = pal, values = ~ProportionMissing, opacity = 0.7, title = "Proportion Missing Race ",
                 position = "bottomleft")
-  }) 
+  })
+  
   
   # build model from user selected checkboxes
   observeEvent(
@@ -70,6 +78,7 @@ server <- function(input, output) {
     handlerExpr = {
       
       Train <- reactive({
+        #data2 <- data[sample(1:nrow(data), 500000, replace = F),]
         createDataPartition(data$missingRace, p=0.7, list=FALSE)
       })
       training <- reactive({
@@ -103,6 +112,5 @@ server <- function(input, output) {
       reset("submit_loc")
     }
   )
-
   
 }
