@@ -86,6 +86,21 @@ ui <- fluidPage(
                                    fluidRow(column(12, plotOutput("residMap1")))
                             )
                           )
+                      )),
+             tabPanel("Officer", value = "officer",
+                      div(class = "outer",
+                          fluidRow(
+                            column(12, align = "center", 
+                                   h3("Number of stops vs. Proportion of stops missing race by Officer", align = "center"),
+                                   img(src='officer_race.png', align = "center", width="500"),
+                                   h3("Explore missing race data by officer", align = "center"),
+                                   plotOutput('officer_race'),
+                                   selectInput('officer', 'Select officer id', 
+                                               officer_missingRace %>% distinct(officer_id) %>% arrange(officer_id), 
+                                               selectize=FALSE,
+                                               selected='2176')
+                            )
+                          )
                       ))
   )
   

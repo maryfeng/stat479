@@ -1,5 +1,6 @@
 load("data.RData")
 load("geoData.Rdata")
+load("officer.Rdata")
 library(shinycssloaders)
 library(shinyjs)
 library(caret)
@@ -127,5 +128,26 @@ server <- function(input, output) {
       reset("submit_loc")
     }
   )
+  
+  # missing race data by officer
+  output$officer_race <- renderPlot({
+    officer_missingRace %>% filter(officer_id == input$officer) %>% 
+      group_by(county_fips) %>% 
+      summarise(missingRaceRatio = mean(missingRace == TRUE)) %>% 
+      transmute(region = as.numeric(county_fips), value = missingRaceRatio) %>% 
+      county_choropleth(state_zoom = "wisconsin", 
+                        title = paste("Proportion of stops missing race by officer", input$officer))
+  })
+  
+  # number of stops by officer
+  output$officer <- renderPlot({
+    d <- read_csv('WI-clean.csv', col_types = list(county_fips = 'c', officer_id = 'c'))
+    officerid <- input$officer
+    officer = d[d$officer_id == officerid,] %>% group_by(county_fips) %>% count() 
+    colnames(officer) = c("region", "value")
+    officer$region = as.numeric(officer$region)
+    county_choropleth(df = officer, state_zoom = "wisconsin", 
+                      title = paste("Stops by Officer", officerid))
+  })
   
 }
