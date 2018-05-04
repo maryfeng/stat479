@@ -9,6 +9,7 @@ library(leaflet)
 library(tidyverse)
 library(shiny)
 library(e1071)
+library(choroplethr)
 server <- function(input, output) {
   
   output$mappedData <- renderLeaflet({
@@ -109,6 +110,20 @@ server <- function(input, output) {
         prf <- performance(pr, measure = "tpr", x.measure = "fpr")
         plot(prf, main="ROC Curve") 
       })
+      
+      output$residMap1 <- renderPlot({
+        residuals <- testing() %>% mutate(prediction = pred()) %>% 
+          mutate(correct = (missingRace == prediction)) %>% 
+          group_by(county_fips) %>% 
+          summarize(ProportionWrong = mean(correct == F))
+        
+        residuals %>% 
+          mutate(value = ProportionWrong, region = as.numeric(as.character(county_fips))) %>% 
+          dplyr::select(value, region) %>%
+          county_choropleth(title = "Proportion Misclassified Per County", state_zoom = "wisconsin") + 
+          scale_fill_brewer(palette="Reds")
+      })
+      
       reset("submit_loc")
     }
   )

@@ -81,7 +81,9 @@ ui <- fluidPage(
                                    ),
                                    hr(),
                                    fluidRow(column(6, verbatimTextOutput("conMat")),
-                                            column(6, plotOutput("roc")))
+                                            column(6, plotOutput("roc"))),
+                                   tags$br(),
+                                   fluidRow(column(12, plotOutput("residMap1")))
                             )
                           )
                       ))
