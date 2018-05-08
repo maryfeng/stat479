@@ -141,13 +141,12 @@ server <- function(input, output) {
   
   # number of stops by officer
   output$officer <- renderPlot({
-    d <- read_csv('WI-clean.csv', col_types = list(county_fips = 'c', officer_id = 'c'))
-    officerid <- input$officer
-    officer = d[d$officer_id == officerid,] %>% group_by(county_fips) %>% count() 
-    colnames(officer) = c("region", "value")
-    officer$region = as.numeric(officer$region)
-    county_choropleth(df = officer, state_zoom = "wisconsin", 
-                      title = paste("Stops by Officer", officerid))
+    officer_missingRace %>% filter(officer_id == input$officer) %>% 
+      group_by(county_fips) %>% 
+      summarise(numStops = n()) %>% 
+      transmute(region = as.numeric(county_fips), value = numStops) %>% 
+      county_choropleth(state_zoom = "wisconsin", 
+                        title = paste("Number of stops made by officer", input$officer))
   })
   
 }
