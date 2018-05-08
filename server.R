@@ -36,7 +36,7 @@ server <- function(input, output) {
     prop <- filteredData %>% group_by(county_fips, missingRace) %>% summarise (n = n()) %>%
       mutate(ProportionMissing = n / sum(n)) %>% filter(missingRace == T)
     prop <- prop %>% select(county_fips, n, ProportionMissing)
-    wiGeo <- merge(wi, prop, by.x = "county_fips", by.y = "county_fips")
+    wiGeo <- sp::merge(wi, prop, by.x = "county_fips", by.y = "county_fips")
     
     ##Colors for fill
     bins <- c(0, .1, .2, .3, .4, .5, .6, 1)
