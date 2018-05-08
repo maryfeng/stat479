@@ -393,3 +393,25 @@ summary(model)
 model2 <- glm(missingRace ~ driver_gender + police_department + year, data = data, family = binomial)
 summary(model2)
 ```
+
+## Missing race data by officer
+
+```{r}
+officer_plot <- d %>% 
+  mutate(missingRace = is.na(driver_race)) %>%
+  group_by(officer_id) %>% 
+  summarise(missingRaceRatio = mean(missingRace == TRUE), numMissing = sum(missingRace), numStops = n()) %>% 
+  ggplot(aes(x=numStops, y=missingRaceRatio)) +
+    geom_point() +
+    xlab("Number of stops by officer") +
+    ylab("Proportion of stops missing race") +
+    ggtitle("Number of stops vs Proportion of stops missing race by officer")
+ggsave("www/officer_race.png", plot=officer_plot)
+```
+
+```{r}
+officer_missingRace <- d %>% 
+  transmute(officer_id, county_fips, missingRace = is.na(driver_race)) 
+save(officer_missingRace, file="officer.Rdata")
+```
+

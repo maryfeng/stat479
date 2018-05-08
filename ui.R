@@ -2,6 +2,8 @@ library(shinycssloaders)
 library(leaflet)
 library(shiny)
 library(caret)
+library(tidyverse)
+load("officer.Rdata")
 ui <- fluidPage(
   
   navbarPage("Wisconsin Traffic Stops",
