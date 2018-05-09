@@ -1,5 +1,6 @@
 Stanford Open Policing EDA
 ================
+Jessie Demers, Mary Feng, Todd Marino
 
 The
 [README](https://github.com/5harad/openpolicing/blob/master/DATA-README.md)
@@ -1035,3 +1036,63 @@ d %>%
     ## 7 WI STATE PATROL NWR/SPO          0.700        12015    17154
     ## 8 WISCONSIN STATE PATROL           0.00219       1692   772699
     ## 9 ZWI STATE PATROL                 0.500            5       10
+
+## Getting manufacturer of vehicle
+
+``` r
+x <- d %>% 
+  separate(vehicle_type, into = c("manu", "model", "year"), sep = " ") %>% 
+  select(manu, model, year) %>% 
+  group_by(manu) %>% 
+  count() %>%
+  arrange(desc(n))
+```
+
+    ## Warning: Too many values at 209906 locations: 4, 5, 17, 26, 37, 43, 46, 50,
+    ## 53, 57, 67, 71, 72, 77, 80, 81, 82, 85, 86, 89, ...
+
+## Getting data in format for model fitting
+
+``` r
+# filters out 2010 data
+# filters out 6 rows with NA for violation
+# assume num of violations = 1 + (number of commas) = 1 + <# of ",">
+# no rows are missing county_fips, so an inner join is safe (doesn't drop any rows)
+# keeps relevant columns
+data <- d %>% 
+  mutate(missingRace = is.na(driver_race)) %>% 
+  select(stop_date, county_fips, police_department, driver_gender, violation, search_conducted, stop_outcome, missingRace) %>%
+  mutate(year = year(stop_date), month = month(stop_date)) %>%
+  filter(year != 2010 | is.na(year)) %>% 
+  filter(!is.na(violation)) %>% 
+  mutate(num_violations = 1 + str_count(violation, ",")) %>% 
+  select(-stop_date, -violation) %>% 
+  inner_join(extraData %>% mutate(county_fips = as.character(county_fips)), by = "county_fips") %>% 
+  replace(is.na(.), "missing") %>% 
+  mutate_if(is.character,as.factor) %>% 
+  mutate_if(is.logical, as.factor) %>% 
+  mutate(year = as.factor(year), month = as.factor(month))
+```
+
+## Missing race data by officer
+
+``` r
+officer_plot <- d %>% 
+  mutate(missingRace = is.na(driver_race)) %>%
+  group_by(officer_id) %>% 
+  summarise(missingRaceRatio = mean(missingRace == TRUE), numMissing = sum(missingRace), numStops = n()) %>% 
+  ggplot(aes(x=numStops, y=missingRaceRatio)) +
+    geom_point() +
+    xlab("Number of stops by officer") +
+    ylab("Proportion of stops missing race") +
+    ggtitle("Number of stops vs Proportion of stops missing race by officer")
+ggsave("www/officer_race.png", plot=officer_plot)
+```
+
+    ## Saving 7 x 5 in image
+
+``` r
+officer_missingRace <- d %>% 
+  transmute(officer_id, county_fips, missingRace = is.na(driver_race)) 
+save(officer_missingRace, file="officer.Rdata")
+```

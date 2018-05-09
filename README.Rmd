@@ -1,5 +1,6 @@
 ---
 title: "Stanford Open Policing EDA"
+author: "Jessie Demers, Mary Feng, Todd Marino"
 output: github_document
 ---
 
@@ -8,6 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(lubridate)
 library(stringr)
+load("extraData.Rdata")
 d = read_csv('WI-clean.csv', col_types = list(county_fips = 'c', officer_id = 'c'))
 ```
 
@@ -350,7 +352,7 @@ d %>%
 ```
   
 
-# getting manufacturer of vehicle 
+## Getting manufacturer of vehicle 
 ```{r}
 x <- d %>% 
   separate(vehicle_type, into = c("manu", "model", "year"), sep = " ") %>% 
@@ -361,13 +363,13 @@ x <- d %>%
 ```
   
   
-# getting data in format for model fitting
+## Getting data in format for model fitting
+```{r}
 # filters out 2010 data
 # filters out 6 rows with NA for violation
 # assume num of violations = 1 + (number of commas) = 1 + <# of ",">
 # no rows are missing county_fips, so an inner join is safe (doesn't drop any rows)
 # keeps relevant columns
-```{r}
 data <- d %>% 
   mutate(missingRace = is.na(driver_race)) %>% 
   select(stop_date, county_fips, police_department, driver_gender, violation, search_conducted, stop_outcome, missingRace) %>%
@@ -383,19 +385,7 @@ data <- d %>%
   mutate(year = as.factor(year), month = as.factor(month))
 ```
 
-```{r}
-model <- glm(missingRace ~ driver_gender + county_fips, family = binomial, 
-    data = data)
-summary(model)
-```
-
-```{r}
-model2 <- glm(missingRace ~ driver_gender + police_department + year, data = data, family = binomial)
-summary(model2)
-```
-
 ## Missing race data by officer
-
 ```{r}
 officer_plot <- d %>% 
   mutate(missingRace = is.na(driver_race)) %>%
